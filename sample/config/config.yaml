@@ -1,0 +1,113 @@
+# ============================================================================
+# PixelDiT-SR 配置文件
+# 基于 Rectified Flow + v-prediction + 均匀步长 ODE 的医学图像 4× 超分
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# 模型结构参数
+# ---------------------------------------------------------------------------
+model:
+  # ---- 通用 ----
+  img_size: 256                # HR 输出尺寸
+  in_channels: 1               # 输入通道数（医学灰度图像）
+  patch_size: 16               # DiT 的 patch 大小
+  time_embed_dim: 256          # 时间嵌入维度
+
+  # ---- DiT（Patch‑level 语义通路）----
+  dit_n_layers: 14             # DiT block 层数
+  dit_hidden_dim: 512          # 隐藏维度 D
+  dit_num_heads: 8             # MHSA 头数
+
+  # ---- PiT（Pixel‑level 纹理通路）----
+  pit_n_layers: 4              # PiT block 层数
+  pit_hidden_dim: 48           # 像素级隐藏维度 D_pix
+  pit_cmp_dim: 512             # Compaction 后的 token 维度 D_cmp
+
+  # ---- WFNO ----
+  wfno_modes: 12               # 保留的傅里叶模态数（截断上限）
+  wfno_alpha: 0.7              # Mode Rebalancing 的 alpha
+
+  # ---- AttnO ----
+  attno_hidden_mult: 2         # Galerkin attention 隐藏层倍数
+
+  # ---- GFM Gate ----
+  gate_hidden_mult: 1          # gate projection 隐藏层倍数
+
+  # ---- LR Encoder ----
+  lr_encoder_channels: [32, 64, 128]
+  lr_encoder_embed_dim: 128
+
+  # ---- 条件生成（纯条件，无 CFG）----
+  cond_drop_rate: 0.0            # 不使用 CFG
+
+# ---------------------------------------------------------------------------
+# 训练参数
+# ---------------------------------------------------------------------------
+training:
+  batch_size: 4
+  epochs: 320
+  lr: 1.0e-4
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.999
+  grad_clip: 1.0                # 梯度裁剪阈值
+  ema_decay: 0.9999             # EMA 衰减率
+
+  # 学习率调度
+  lr_scheduler: "step"          # step / cosine / plateau
+  lr_step_epochs: [160, 240]    # step 模式的衰减点
+  lr_decay_factor: 0.1          # step 模式每次衰减因子
+  warmup_steps: 5000            # warmup 步数（线性增加 LR）
+
+  # 损失
+  loss_type: "mse"              # 损失类型
+  freq_loss_weight: 0.1         # 频域 L1 损失权重
+
+  # 数据
+  train_dir: "t2extrct"         # 训练集文件夹
+  val_dir: "test"               # 验证集文件夹
+  lr_size: 64                   # LR 输入尺寸
+  hr_size: 256                  # HR 目标尺寸
+  num_workers: 4                # DataLoader 工作进程数
+
+  # 日志与保存
+  log_interval: 1000              # 每 N 个 batch 打印一次日志
+  val_interval: 1000            # 每 N 个 batch 验证一次
+  save_interval: 1             # 每 N 个 epoch 保存一次 checkpoint
+  checkpoint_dir: "checkpoints"
+
+# ---------------------------------------------------------------------------
+# 推理参数
+# ---------------------------------------------------------------------------
+inference:
+  batch_size: 1
+  num_ode_steps: 50             # 推理 ODE 步数（均匀步长）
+  output_dir: "result"
+
+# ---------------------------------------------------------------------------
+# Smoke 测试（覆盖训练配置）
+# ---------------------------------------------------------------------------
+smoke:
+  # ---- 模型缩小 ----
+  model:
+    dit_n_layers: 6
+    dit_hidden_dim: 256
+    dit_num_heads: 4
+    pit_n_layers: 2
+    pit_hidden_dim: 24
+    pit_cmp_dim: 96
+    wfno_modes: 8
+    cond_drop_rate: 0.0           # smoke 不做 CFG
+
+  # ---- 训练缩短 ----
+  training:
+    batch_size: 2
+    epochs: 5
+    lr: 2.0e-4
+    log_interval: 1
+    val_interval: 10
+    save_interval: 99
+    num_workers: 1
+    warmup_steps: 500
+    freq_loss_weight: 0.1
+    checkpoint_dir: "checkpoints_smoke"

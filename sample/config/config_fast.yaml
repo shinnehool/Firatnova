@@ -1,0 +1,99 @@
+# ============================================================================
+# PixelDiT-SR 快速验证配置（100 张训练集，验证随机抽训练集）
+# ============================================================================
+
+# ---------------------------------------------------------------------------
+# 模型结构参数（与正式训练一致）
+# ---------------------------------------------------------------------------
+model:
+  img_size: 256
+  in_channels: 1
+  patch_size: 16
+  time_embed_dim: 256
+
+  dit_n_layers: 14
+  dit_hidden_dim: 512
+  dit_num_heads: 8
+
+  pit_n_layers: 4
+  pit_hidden_dim: 48
+  pit_cmp_dim: 512
+
+  wfno_modes: 12
+  wfno_alpha: 0.7
+  attno_hidden_mult: 2
+  gate_hidden_mult: 1
+
+  lr_encoder_channels: [32, 64, 128]
+  lr_encoder_embed_dim: 128
+
+  num_ode_steps: 30
+  cond_drop_rate: 0.0            # 不使用 CFG
+
+# ---------------------------------------------------------------------------
+# 训练参数
+# ---------------------------------------------------------------------------
+training:
+  batch_size: 4
+  epochs: 100
+  lr: 1.0e-4
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.999
+  grad_clip: 1.0
+  ema_decay: 0.999              # 适中衰减率
+
+  lr_scheduler: "step"
+  lr_step_epochs: [80, 95]        # 推迟衰减，让模型在完整 LR 下充分学习
+  lr_decay_factor: 0.1
+  warmup_steps: 500              # 延长 warmup
+
+  loss_type: "mse"
+  freq_loss_weight: 0.1
+
+  # ---- 快速验证专用 ----
+  train_dir: "train_fast"       # 100 张训练集
+  val_dir: "train_fast"         # 从训练集随机抽图验证（测拟合能力）
+  val_shuffle: true             # 验证时随机抽样
+  lr_size: 64
+  hr_size: 256
+  num_workers: 4
+
+  log_interval: 25              # 每 epoch 打印一次（25 steps/epoch）
+  val_interval: 50             # 每 2 epoch 验证一次
+  save_interval: 5
+  checkpoint_dir: "checkpoints"
+
+# ---------------------------------------------------------------------------
+# 推理参数
+# ---------------------------------------------------------------------------
+inference:
+  batch_size: 1
+  num_ode_steps: 50             # 推理 ODE 步数（均匀步长）
+  output_dir: "result"
+
+# ---------------------------------------------------------------------------
+# Smoke 测试
+# ---------------------------------------------------------------------------
+smoke:
+  model:
+    dit_n_layers: 6
+    dit_hidden_dim: 256
+    dit_num_heads: 4
+    pit_n_layers: 2
+    pit_hidden_dim: 24
+    pit_cmp_dim: 96
+    wfno_modes: 8
+    cond_drop_rate: 0.0
+
+  training:
+    batch_size: 2
+    epochs: 5
+    lr: 2.0e-4
+    log_interval: 1
+    val_interval: 10
+    save_interval: 99
+    num_workers: 1
+    warmup_steps: 500
+    freq_loss_weight: 0.1
+    checkpoint_dir: "checkpoints_smoke"
