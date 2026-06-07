@@ -1,0 +1,27 @@
+# Data directories (too large for git)
+sample/t2extrct/
+sample/test/
+sample/val/
+sample/train_fast/
+sample/result/
+sample/*.png
+
+# Checkpoints & large model files
+checkpoints/
+checkpoints_smoke/
+*.pth
+*.pt
+*.ckpt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
